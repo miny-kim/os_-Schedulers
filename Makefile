@@ -6,7 +6,7 @@ LDFLAGS	=
 
 all: sched
 
-sched: pa2.o parser.o
+sched: pa2.o parser.o sched.o
 	gcc $(LDFLAGS) $^ -o $@
 
 %.o: %.c
@@ -15,28 +15,3 @@ sched: pa2.o parser.o
 .PHONY: clean
 clean:
 	rm -rf $(TARGET) *.o *.dSYM
-
-
-.PHONY: test-run
-test-run: $(TARGET) testcases/test-run
-	./$< -q < testcases/test-run
-
-.PHONY: test-timeout
-test-timeout: $(TARGET) testcases/test-timeout
-	./$< -q < testcases/test-timeout
-
-.PHONY: test-cd
-test-cd: $(TARGET) testcases/test-cd
-	./$< -q < testcases/test-cd
-
-.PHONY: test-for
-test-for: $(TARGET) testcases/test-for
-	./$< -q < testcases/test-cd
-
-.PHONY: test-prompt
-test-prompt: $(TARGET) testcases/test-prompt
-	./$< < testcases/test-prompt
-
-
-test-all: test-run test-timeout test-cd test-for test-prompt
-	echo
