@@ -187,7 +187,7 @@ static int __load_script(char * const filename)
 			p->lifespan = atoi(tokens[1]);
 		} else if (strmatch(tokens[0], "prio")) {
 			assert(nr_tokens == 2);
-			p->prio = atoi(tokens[1]);
+			p->prio = p->prio_orig = atoi(tokens[1]);
 		} else if (strmatch(tokens[0], "start")) {
 			assert(nr_tokens == 2);
 			p->__starts_at = atoi(tokens[1]);

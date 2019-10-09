@@ -205,8 +205,6 @@ struct scheduler rr_scheduler = {
  ***********************************************************************/
 struct scheduler prio_scheduler = {
 	.name = "Priority",
-	.acquire = default_acquire,
-	.release = default_release,
 };
 
 
