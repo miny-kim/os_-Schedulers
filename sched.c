@@ -97,7 +97,9 @@ void default_release(int resource_id)
 	if (!list_empty(&r->waitqueue)) {
 		struct process *p = list_first_entry(&r->waitqueue, struct process, list);
 
-		/* Take out from the waiting queue */
+		/* Take out from the waiting queue. Note we use list_del_init() instead
+		 * of list_del() to maintain the list head sane otherwise the framework
+		 * will complain on process exit. */
 		list_del_init(&p->list);
 
 		/* Put the process into ready queue. The framework will do the rest */
@@ -151,7 +153,9 @@ pick_next:
 		 */
 		next = list_first_entry(&readyqueue, struct process, list);
 
-		/* Detach the process from the ready queue */
+		/* Detach the process from the ready queue. Note we use list_del_init()
+		 * instead of list_del() to maintain the list head sane. Otherwise,
+		 * the framework will complain (assert) on process exit. */
 		list_del_init(&next->list);
 	}
 

@@ -326,7 +326,9 @@ static void __do_simulation(void)
 		/* Run the current process */
 		blocked = __run_current_acquire();
 
-		if (!blocked) {
+		if (blocked) {
+			__print_event(current->pid, "=");
+		} else {
 			__print_event(current->pid, "%d", current->pid);
 		}
 
@@ -370,8 +372,11 @@ static void __initialize(void)
 	printf("*   Simulating %s scheduler\n", sched->name);
 	printf("*\n");
 	printf("**************************************************************\n");
-	printf("   N: Forked               X: Finished\n");
-	printf("  +n: Acquire resource n  -n: Release resource n\n");
+	printf("   N: Forked\n");
+	printf("   X: Finished\n");
+	printf("   =: Blocked\n");
+	printf("  +n: Acquire resource n\n");
+	printf("  -n: Release resource n\n");
 	printf("\n");
 }
 
