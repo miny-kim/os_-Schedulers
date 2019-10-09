@@ -164,7 +164,7 @@ pick_next:
 }
 
 struct scheduler fifo_scheduler = {
-	.name = "fifo",
+	.name = "FIFO",
 	.acquire = default_acquire,
 	.release = default_release,
 	.initialize = fifo_initialize,
@@ -179,13 +179,16 @@ struct scheduler fifo_scheduler = {
  ***********************************************************************/
 static struct process *sjf_schedule(bool current_blocked)
 {
+	/** 
+	 * Implement your own SJF scheduler here.
+	 */
 	return NULL;
 }
 
 struct scheduler sjf_scheduler = {
-	.name = "SJF",
-	.acquire = default_acquire,
-	.release = default_release,
+	.name = "Shortest-Job First",
+	.acquire = default_acquire, /* Use the default acquire() */
+	.release = default_release, /* Use the default release() */
 	.schedule = sjf_schedule,
 };
 
@@ -194,9 +197,10 @@ struct scheduler sjf_scheduler = {
  * Round-robin scheduler
  ***********************************************************************/
 struct scheduler rr_scheduler = {
-	.name = "Round-robin",
-	.acquire = default_acquire,
-	.release = default_release,
+	.name = "Round-Robin",
+	.acquire = default_acquire, /* Use the default acquire() */
+	.release = default_release, /* Use the default release() */
+	/* Obviously, you should implement rr_schedule() and attach it here */
 };
 
 
@@ -205,6 +209,11 @@ struct scheduler rr_scheduler = {
  ***********************************************************************/
 struct scheduler prio_scheduler = {
 	.name = "Priority",
+	/**
+	 * Implement your own acqure/release function to make priority
+	 * scheduler correct.
+	 */
+	/* Implement your own prio_schedule() and attach it here */
 };
 
 
@@ -212,5 +221,10 @@ struct scheduler prio_scheduler = {
  * Priority scheduler with priority inheritance protocol
  ***********************************************************************/
 struct scheduler pip_scheduler = {
-	.name = "Priority + priority inheritance protocol",
+	.name = "Priority + Priority Inheritance Protocol",
+	/**
+	 * Implement your own acqure/release function to make priority
+	 * scheduler correct.
+	 */
+	/* Implement your own pip_schedule() and attach it here */
 };
