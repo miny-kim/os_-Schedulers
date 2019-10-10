@@ -305,8 +305,8 @@ static void __exit_process(struct process *p)
 }
 
 
-/****
- * The main loop for the simulation
+/***********************************************************************
+ * The main loop for the scheduler simulation
  */
 static void __do_simulation(void)
 {
@@ -322,14 +322,17 @@ static void __do_simulation(void)
 		prev = current;
 		current = sched->schedule();
 
-		/* Decommission the completed process */
+		/* If the system ran a process in the previous tick, */
 		if (prev) {
+			/* Update the process status */
+			if (prev->status == PROCESS_RUNNING) {
+				prev->status = PROCESS_READY;
+			}
+
+			/* Decommission it if completed */
 			if (prev->age == prev->lifespan) {
 				prev->status = PROCESS_EXIT;
 				__exit_process(prev);
-			}
-			if (prev->status == PROCESS_RUNNING) {
-				prev->status = PROCESS_READY;
 			}
 		}
 
@@ -348,24 +351,31 @@ static void __do_simulation(void)
 		/* Execute the current process */
 		current->status = PROCESS_RUNNING;
 
-		if (!__run_current_acquire()) {
-			/**
-			 * The current is blocked while acquiring resource(s). In this case,
-			 * It did not make a progress in this tick
-			 */
-			__print_event(current->pid, "=");
-		} else {
-			/**
-			 * The current acquired all the resources to make a progress.
-			 * So, it ages by one tick and performs pending releases
-			 */
+		/* Ensure that @current is detached from any list */
+		assert(list_empty(&current->list));
+
+		/* Try acquiring scheduled resources */
+		if (__run_current_acquire()) {
+			/* Succesfully acquired all the resources to make a progress! */
 			__print_event(current->pid, "%d", current->pid);
 
+			/* So, it ages by one tick */
 			current->age++;
+
+			/* And performs scheduled releases */
 			__run_current_release();
+		} else {
+			/**
+			 * The current is blocked while acquiring resource(s).
+			 * In this case, @current could not make a progress in this tick
+			 */
+			__print_event(current->pid, "=");
+
+			/* Thus, it is not get aged nor unable to perform releases */
 		}
 
 next:
+		/* Increase the tick counter */
 		ticks++;
 	}
 }
