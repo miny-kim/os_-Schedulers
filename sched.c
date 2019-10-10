@@ -46,6 +46,12 @@ extern struct resource resources[NR_RESOURCES];
 extern unsigned int ticks;
 
 
+/**
+ * Quiet mode. True if the program was started with -q option
+ */
+extern bool quiet;
+
+
 /***********************************************************************
  * Default FCFS resource acquision function
  *
@@ -148,6 +154,9 @@ static void fifo_finalize(void)
 static struct process *fifo_schedule(void)
 {
 	struct process *next = NULL;
+
+	/* You may inspect the situation by calling dump_status() at any time */
+	// dump_status();
 
 	/**
 	 * When there was no process to run in the * previous tick (so does

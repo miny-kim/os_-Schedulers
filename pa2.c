@@ -64,7 +64,14 @@ struct resource_schedule {
 
 static LIST_HEAD(__forkqueue);
 
-static bool __quiet = false;
+bool quiet = false;
+
+static const char * __process_status_sz[] = {
+	"RDY",
+	"RUN",
+	"WAT",
+	"EXT",
+};
 
 /**
  * Assorted schedulers
@@ -83,15 +90,17 @@ void dump_status(void)
 
 	printf("***** CURRENT *********\n");
 	if (current) {
-		printf("%2d: %d + %d/%d at %d\n",
-				current->pid, current->__starts_at,
+		printf("%2d (%s): %d + %d/%d at %d\n",
+				current->pid, __process_status_sz[current->status],
+				current->__starts_at,
 				current->age, current->lifespan, current->prio);
 	}
 
 	printf("***** READY QUEUE *****\n");
 	list_for_each_entry(p, &readyqueue, list) {
-		printf("%2d: %d + %d/%d at %d\n",
-				p->pid, p->__starts_at, p->age, p->lifespan, p->prio);
+		printf("%2d (%s): %d + %d/%d at %d\n",
+				p->pid, __process_status_sz[p->status],
+				p->__starts_at, p->age, p->lifespan, p->prio);
 	}
 
 	printf("***** RESOURCES *******\n");
@@ -132,7 +141,7 @@ static void __briefing_process(struct process *p)
 {
 	struct resource_schedule *rs;
 
-	if (__quiet) return;
+	if (quiet) return;
 
 	printf("- Process %d: Forked at tick %d and run for %d tick%s with initial priority %d\n",
 				p->pid, p->__starts_at, p->lifespan,
@@ -209,7 +218,7 @@ static int __load_script(char * const filename)
 		}
 	}
 	fclose(file);
-	if (!__quiet) printf("\n");
+	if (!quiet) printf("\n");
 	return true;
 }
 
@@ -309,10 +318,6 @@ static void __do_simulation(void)
 		/* Fork processes on schedule */
 		__fork_on_schedule();
 
-		if (current && current->status == PROCESS_RUNNING) {
-			current->status = PROCESS_READY;
-		}
-
 		/* Ask scheduler to pick the next process to run */
 		prev = current;
 		current = sched->schedule();
@@ -322,6 +327,9 @@ static void __do_simulation(void)
 			if (prev->age == prev->lifespan) {
 				prev->status = PROCESS_EXIT;
 				__exit_process(prev);
+			}
+			if (prev->status == PROCESS_RUNNING) {
+				prev->status = PROCESS_READY;
 			}
 		}
 
@@ -374,7 +382,7 @@ static void __initialize(void)
 
 	INIT_LIST_HEAD(&__forkqueue);
 
-	if (__quiet) return;
+	if (quiet) return;
 	printf("**************************************************************\n");
 	printf("*\n");
 	printf("*   Simulating %s scheduler\n", sched->name);
@@ -410,7 +418,7 @@ int main(int argc, char * const argv[])
 	while ((opt = getopt(argc, argv, "qfsrpih")) != -1) {
 		switch (opt) {
 		case 'q':
-			__quiet = true;
+			quiet = true;
 			break;
 
 		case 'f':
