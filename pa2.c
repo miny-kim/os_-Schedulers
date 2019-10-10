@@ -300,57 +300,59 @@ static void __exit_process(struct process *p)
  */
 static void __do_simulation(void)
 {
+	bool blocked = false;
+
 	assert(sched->schedule && "scheduler.schedule() not implemented");
 
-	while (current || !list_empty(&readyqueue) || !list_empty(&__forkqueue)) {
+	while (true) {
 		struct process *prev;
-		bool blocked = false;
 
-		/* Fork initial processes */
-		__fork_on_schedule();
-
-		/**
-		 * If no process is scheduled this time, try to schedule
-		 * one before starting this tick. Nasty...
-		 */
-		if (!current) {
-			current = sched->schedule(false);
-
-			if (!current) {
-				printf("%3d: idle\n", ticks);
-				ticks++;
-				continue;
-			}
-		}
-
-		/* Run the current process */
-		blocked = __run_current_acquire();
-
-		if (blocked) {
-			__print_event(current->pid, "=");
-		} else {
-			__print_event(current->pid, "%d", current->pid);
-		}
-
-		ticks++;
-
-		/* If the current can successfully acquire resources, current ages by one tick */
-		if (!blocked) {
-			current->age++;
-			__run_current_release();
-		}
-
-		/* Fork processes if any scheduled */
+		/* Fork processes on schedule */
 		__fork_on_schedule();
 
 		/* Ask scheduler to pick the next process to run */
 		prev = current;
 		current = sched->schedule(blocked);
 
-		/* Decommission completed process */
-		if (prev->age == prev->lifespan) {
-			__exit_process(prev);
+		/* Decommission the completed process */
+		if (prev) {
+			if (prev->age == prev->lifespan) {
+				__exit_process(prev);
+			}
 		}
+
+		/* No process is ready to run at this moment */
+		if (!current) {
+			/* Quit simulation if no pending process exists */
+			if (list_empty(&readyqueue) && list_empty(&__forkqueue)) {
+				break;
+			}
+
+			/* Idle temporarily */
+			fprintf(stderr, "%3d: idle\n", ticks);
+			goto next;
+		}
+
+		/* Execute the current process */
+		if ((blocked = __run_current_acquire())) {
+			/**
+			 * The current is blocked while acquiring resource(s). In this case,
+			 * It did not make a progress in this tick
+			 */
+			__print_event(current->pid, "=");
+		} else {
+			/**
+			 * The current acquired all the resources to make a progress.
+			 * So, it ages by one tick and performs pending releases
+			 */
+			__print_event(current->pid, "%d", current->pid);
+
+			current->age++;
+			__run_current_release();
+		}
+
+next:
+		ticks++;
 	}
 }
 
