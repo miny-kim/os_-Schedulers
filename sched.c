@@ -54,7 +54,7 @@ extern unsigned int ticks;
  *   whenever the current process is to acquire resource @resource_id.
  *   See the comments in sched.h
  ***********************************************************************/
-bool default_acquire(int resource_id)
+bool fcfs_acquire(int resource_id)
 {
 	struct resource *r = resources + resource_id;
 
@@ -65,7 +65,7 @@ bool default_acquire(int resource_id)
 	}
 
 	/* OK, this resource is taken by @r->owner. Add current to waitqueue */
-	list_add(&current->list, &r->waitqueue);
+	list_add_tail(&current->list, &r->waitqueue);
 
 	/**
 	 * And return false to indicate the resource is not available.
@@ -83,7 +83,7 @@ bool default_acquire(int resource_id)
  *   whenever the current process is to release resource @resource_id.
  *   See the comments in sched.h
  ***********************************************************************/
-void default_release(int resource_id)
+void fcfs_release(int resource_id)
 {
 	struct resource *r = resources + resource_id;
 
@@ -165,8 +165,8 @@ pick_next:
 
 struct scheduler fifo_scheduler = {
 	.name = "FIFO",
-	.acquire = default_acquire,
-	.release = default_release,
+	.acquire = fcfs_acquire,
+	.release = fcfs_release,
 	.initialize = fifo_initialize,
 	.finalize = fifo_finalize,
 	.schedule = fifo_schedule,
@@ -187,8 +187,8 @@ static struct process *sjf_schedule(bool current_blocked)
 
 struct scheduler sjf_scheduler = {
 	.name = "Shortest-Job First",
-	.acquire = default_acquire, /* Use the default acquire() */
-	.release = default_release, /* Use the default release() */
+	.acquire = fcfs_acquire, /* Use the default acquire() */
+	.release = fcfs_release, /* Use the default release() */
 	.schedule = sjf_schedule,
 };
 
@@ -198,8 +198,8 @@ struct scheduler sjf_scheduler = {
  ***********************************************************************/
 struct scheduler rr_scheduler = {
 	.name = "Round-Robin",
-	.acquire = default_acquire, /* Use the default acquire() */
-	.release = default_release, /* Use the default release() */
+	.acquire = fcfs_acquire, /* Use the default acquire() */
+	.release = fcfs_release, /* Use the default release() */
 	/* Obviously, you should implement rr_schedule() and attach it here */
 };
 
