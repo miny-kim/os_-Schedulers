@@ -16,11 +16,19 @@
 #ifndef __SCHED_H__
 #define __SCHED_H__
 
+/***********************************************************************
+ * struct scheduler
+ *
+ * DESCRIPTION
+ *   This structure is a collection of callback functions for a scheduler..
+ *   Apply your scheduling policy by assigining appropriate functions to
+ *   the function pointers.
+ */
 struct scheduler {
 	const char *name;
 
 	/***********************************************************************
-	 * initialize()
+	 * int initialize(void)
 	 *
 	 * DESCRIPTION
 	 *   Call-back function for your own initialization code. It is OK to
@@ -34,7 +42,7 @@ struct scheduler {
 
 
 	/***********************************************************************
-	 * finalize()
+	 * void finalize(void)
 	 *
 	 * DESCRIPTION
 	 *   Callback function for finalizing your code. Like @initialize(),
@@ -44,11 +52,16 @@ struct scheduler {
 
 
 	/***********************************************************************
-	 * schedule(current_blocked)
+	 * struct process *schedule(bool current_blocked)
 	 *
 	 * DESCRIPTION
-	 *   Schedule the next process. @current points to the current process
-	 *   which has been running on the processor.
+	 *   Pick a process to run next. @current points to the current process
+	 *   which has been running on the processor. @current_blocked indicates
+	 *   whether the current process is blocked or not. You may put the current
+	 *   into the ready queue and pick a process to run next if the current is
+	 *   not blocked. When the current is blocked, however, you should not put
+	 *   it back into the ready queue since it is not ready (but is waiting for
+	 *   the resource)!!
 	 *
 	 * RETURN
 	 *   process to run next
@@ -58,7 +71,7 @@ struct scheduler {
 
 
 	/***********************************************************************
-	 * acquire(resource_id)
+	 * bool acquire(int resource_id)
 	 *
 	 * DESCRIPTION
 	 *   Callback function to acquire the resource @resource_id.
@@ -71,13 +84,10 @@ struct scheduler {
 
 
 	/***********************************************************************
-	 * release(resource_id)
+	 * void release(int resource_id)
 	 *
 	 * DESCRIPTION
-	 *   Callback to release the resource @resource_id
-	 *
-	 * RETURN
-	 *   void
+	 *   Callbacked to release the resource @resource_id
 	 */
 	void (*release)(int);
 };

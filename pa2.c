@@ -14,7 +14,7 @@
  **********************************************************************/
 
 /*====================================================================*/
-/*          ****** DO NOT MODIFY THIS FILE               ******       */
+/*          ******        DO NOT MODIFY THIS FILE        ******       */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -83,7 +83,7 @@ void dump_status(void)
 
 	printf("***** CURRENT *********\n");
 	if (current) {
-		printf("%d: %d + %d/%d at %d\n",
+		printf("%2d: %d + %d/%d at %d\n",
 				current->pid, current->__starts_at,
 				current->age, current->lifespan, current->prio);
 	}
@@ -110,6 +110,7 @@ void dump_status(void)
 			}
 		}
 	}
+	printf("\n\n");
 
 	return;
 }
@@ -401,7 +402,7 @@ int main(int argc, char * const argv[])
 	int opt;
 	char *scriptfile;
 
-	while ((opt = getopt(argc, argv, "qfsrpi")) != -1) {
+	while ((opt = getopt(argc, argv, "qfsrpih")) != -1) {
 		switch (opt) {
 		case 'q':
 			__quiet = true;
@@ -422,6 +423,7 @@ int main(int argc, char * const argv[])
 		case 'i':
 			sched = &pip_scheduler;
 			break;
+		case 'h':
 		default:
 			__print_usage(argv[0]);
 			return EXIT_FAILURE;
@@ -453,5 +455,5 @@ int main(int argc, char * const argv[])
 
 	return EXIT_SUCCESS;
 }
-/*          ****** DO NOT MODIFY THIS FILE               ******       */
+/*          ******        DO NOT MODIFY THIS FILE        ******       */
 /*====================================================================*/

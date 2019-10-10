@@ -47,12 +47,13 @@ extern unsigned int ticks;
 
 
 /***********************************************************************
- * Default resource acquision function
+ * Default FCFS resource acquision function
  *
  * DESCRIPTION
  *   This is the default resource acquision function which is called back
  *   whenever the current process is to acquire resource @resource_id.
- *   See the comments in sched.h
+ *   The current implementation serves the resource in the requesting order
+ *   without considering the priority. See the comments in sched.h
  ***********************************************************************/
 bool fcfs_acquire(int resource_id)
 {
@@ -64,24 +65,25 @@ bool fcfs_acquire(int resource_id)
 		return true;
 	}
 
-	/* OK, this resource is taken by @r->owner. Add current to waitqueue */
+	/* OK, this resource is taken by @r->owner. Append current to waitqueue */
 	list_add_tail(&current->list, &r->waitqueue);
 
 	/**
 	 * And return false to indicate the resource is not available.
 	 * The scheduler framework will soon call schedule() function to
-	 * schedule the next process to run.
+	 * schedule out current and to pick the next process to run.
 	 */
 	return false;
 }
 
 /***********************************************************************
- * Default resource release function
+ * Default FCFS resource release function
  *
  * DESCRIPTION
  *   This is the default resource release function which is called back
  *   whenever the current process is to release resource @resource_id.
- *   See the comments in sched.h
+ *   The current implementation serves the resource in the requesting order
+ *   without considering the priority. See the comments in sched.h
  ***********************************************************************/
 void fcfs_release(int resource_id)
 {
@@ -93,17 +95,24 @@ void fcfs_release(int resource_id)
 	/* Un-own this resource */
 	r->owner = NULL;
 
-	/* Let's wake up ONE waiter if exists */
+	/* Let's wake up ONE waiter (if exists) that came first */
 	if (!list_empty(&r->waitqueue)) {
-		struct process *p = list_first_entry(&r->waitqueue, struct process, list);
+		struct process *waiter =
+				list_first_entry(&r->waitqueue, struct process, list);
 
-		/* Take out from the waiting queue. Note we use list_del_init() instead
-		 * of list_del() to maintain the list head sane otherwise the framework
-		 * will complain on process exit. */
-		list_del_init(&p->list);
+		/**
+		 * Take out the waiter from the waiting queue. Note we use
+		 * list_del_init() over list_del() to maintain the list head tidy
+		 * (otherwise, the framework will complain on the list head
+		 * when the process exits).
+		 */
+		list_del_init(&waiter->list);
 
-		/* Put the process into ready queue. The framework will do the rest */
-		list_add_tail(&p->list, &readyqueue);
+		/**
+		 * Put the waiter process into ready queue. The framework will
+		 * do the rest.
+		 */
+		list_add_tail(&waiter->list, &readyqueue);
 	}
 }
 
@@ -128,7 +137,8 @@ static struct process *fifo_schedule(bool current_blocked)
 	struct process *next = NULL;
 
 	/**
-	 * In the beginning, there will be no current process. In this case,
+	 * In the beginning and when there was no process to run in the
+	 * previous tick, there will be no current process. In this case,
 	 * pick the next without examining the current process. Also, when
 	 * the current process is blocked while acquiring a resource,
 	 * @current is (supposed to be) attached to the waitqueue of
@@ -153,9 +163,11 @@ pick_next:
 		 */
 		next = list_first_entry(&readyqueue, struct process, list);
 
-		/* Detach the process from the ready queue. Note we use list_del_init()
-		 * instead of list_del() to maintain the list head sane. Otherwise,
-		 * the framework will complain (assert) on process exit. */
+		/**
+		 * Detach the process from the ready queue. Note we use list_del_init()
+		 * instead of list_del() to maintain the list head tidy. Otherwise,
+		 * the framework will complain (assert) on process exit.
+		 */
 		list_del_init(&next->list);
 	}
 
@@ -179,7 +191,7 @@ struct scheduler fifo_scheduler = {
  ***********************************************************************/
 static struct process *sjf_schedule(bool current_blocked)
 {
-	/** 
+	/**
 	 * Implement your own SJF scheduler here.
 	 */
 	return NULL;
@@ -187,9 +199,11 @@ static struct process *sjf_schedule(bool current_blocked)
 
 struct scheduler sjf_scheduler = {
 	.name = "Shortest-Job First",
-	.acquire = fcfs_acquire, /* Use the default acquire() */
-	.release = fcfs_release, /* Use the default release() */
-	.schedule = sjf_schedule,
+	.acquire = fcfs_acquire, /* Use the default FCFS acquire() */
+	.release = fcfs_release, /* Use the default FCFS release() */
+	.schedule = NULL,		 /* TODO: Assign sjf_schedule()
+								to this function pointer to activate
+								SJF in the system */
 };
 
 
@@ -198,8 +212,8 @@ struct scheduler sjf_scheduler = {
  ***********************************************************************/
 struct scheduler rr_scheduler = {
 	.name = "Round-Robin",
-	.acquire = fcfs_acquire, /* Use the default acquire() */
-	.release = fcfs_release, /* Use the default release() */
+	.acquire = fcfs_acquire, /* Use the default FCFS acquire() */
+	.release = fcfs_release, /* Use the default FCFS release() */
 	/* Obviously, you should implement rr_schedule() and attach it here */
 };
 

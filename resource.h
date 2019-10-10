@@ -30,13 +30,14 @@ struct resource {
 	struct process *owner;
 
 	/**
-	 * list head to track processes that want to acquire this resource
+	 * list head to list processes that are wanting for the resource
 	 */
 	struct list_head waitqueue;
 };
 
 /**
- * This system has 32 different resources
+ * This system has 32 different resources. It is defined in pa2.c as an array of
+ * struct resource (i.e., struct resource resources[NR_RESOURCES];)
  */
 #define NR_RESOURCES 32
 
