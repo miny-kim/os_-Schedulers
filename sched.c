@@ -65,7 +65,12 @@ bool fcfs_acquire(int resource_id)
 		return true;
 	}
 
-	/* OK, this resource is taken by @r->owner. Append current to waitqueue */
+	/* OK, this resource is taken by @r->owner. */
+
+	/* Update the current process state */
+	current->status = PROCESS_WAIT;
+
+	/* And append current to waitqueue */
 	list_add_tail(&current->list, &r->waitqueue);
 
 	/**
@@ -101,12 +106,20 @@ void fcfs_release(int resource_id)
 				list_first_entry(&r->waitqueue, struct process, list);
 
 		/**
+		 * Ensure the waiter  is in the wait status
+		 */
+		assert(waiter->status == PROCESS_WAIT);
+
+		/**
 		 * Take out the waiter from the waiting queue. Note we use
 		 * list_del_init() over list_del() to maintain the list head tidy
 		 * (otherwise, the framework will complain on the list head
 		 * when the process exits).
 		 */
 		list_del_init(&waiter->list);
+
+		/* Update the process status */
+		waiter->status = PROCESS_READY;
 
 		/**
 		 * Put the waiter process into ready queue. The framework will
@@ -132,19 +145,20 @@ static void fifo_finalize(void)
 {
 }
 
-static struct process *fifo_schedule(bool current_blocked)
+static struct process *fifo_schedule(void)
 {
 	struct process *next = NULL;
 
 	/**
-	 * In the beginning and when there was no process to run in the
-	 * previous tick, there will be no current process. In this case,
-	 * pick the next without examining the current process. Also, when
-	 * the current process is blocked while acquiring a resource,
-	 * @current is (supposed to be) attached to the waitqueue of
-	 * the corresponding resource. In this case just pick the next.
+	 * When there was no process to run in the * previous tick (so does
+	 * in the very beginning of the simulation), there will be
+	 * no current process. In this case, pick the next without examining
+	 * the current process. Also, when the current process is blocked
+	 * while acquiring a resource, @current is (supposed to be) attached
+	 * to the waitqueue of the corresponding resource. In this case just
+	 * pick the next as well.
 	 */
-	if (!current || current_blocked) {
+	if (!current || current->status == PROCESS_WAIT) {
 		goto pick_next;
 	}
 
@@ -185,11 +199,10 @@ struct scheduler fifo_scheduler = {
 };
 
 
-
 /***********************************************************************
  * SJF scheduler
  ***********************************************************************/
-static struct process *sjf_schedule(bool current_blocked)
+static struct process *sjf_schedule(void)
 {
 	/**
 	 * Implement your own SJF scheduler here.

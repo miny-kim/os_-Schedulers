@@ -245,12 +245,12 @@ static bool __run_current_acquire()
 
 				__print_event(current->pid, "+%d", rs->resource_id);
 			} else {
-				return true;
+				return false;
 			}
 		}
 	}
 
-	return false;
+	return true;
 }
 
 /**
@@ -301,8 +301,6 @@ static void __exit_process(struct process *p)
  */
 static void __do_simulation(void)
 {
-	bool blocked = false;
-
 	assert(sched->schedule && "scheduler.schedule() not implemented");
 
 	while (true) {
@@ -311,13 +309,18 @@ static void __do_simulation(void)
 		/* Fork processes on schedule */
 		__fork_on_schedule();
 
+		if (current && current->status == PROCESS_RUNNING) {
+			current->status = PROCESS_READY;
+		}
+
 		/* Ask scheduler to pick the next process to run */
 		prev = current;
-		current = sched->schedule(blocked);
+		current = sched->schedule();
 
 		/* Decommission the completed process */
 		if (prev) {
 			if (prev->age == prev->lifespan) {
+				prev->status = PROCESS_EXIT;
 				__exit_process(prev);
 			}
 		}
@@ -335,7 +338,9 @@ static void __do_simulation(void)
 		}
 
 		/* Execute the current process */
-		if ((blocked = __run_current_acquire())) {
+		current->status = PROCESS_RUNNING;
+
+		if (!__run_current_acquire()) {
 			/**
 			 * The current is blocked while acquiring resource(s). In this case,
 			 * It did not make a progress in this tick

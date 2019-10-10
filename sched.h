@@ -52,22 +52,21 @@ struct scheduler {
 
 
 	/***********************************************************************
-	 * struct process *schedule(bool current_blocked)
+	 * struct process *schedule(void)
 	 *
 	 * DESCRIPTION
 	 *   Pick a process to run next. @current points to the current process
-	 *   which has been running on the processor. @current_blocked indicates
-	 *   whether the current process is blocked or not. You may put the current
+	 *   which has been running on the processor. You may put the current
 	 *   into the ready queue and pick a process to run next if the current is
-	 *   not blocked. When the current is blocked, however, you should not put
-	 *   it back into the ready queue since it is not ready (but is waiting for
-	 *   the resource)!!
+	 *   ready status. When the current is blocked (i.e., waiting for some
+	 *   resources), however, you should not put it back into the ready queue
+	 *   since it is not ready (but is waiting for the resource)!!
 	 *
 	 * RETURN
 	 *   process to run next
 	 *   NULL if there is no available process to schedule
 	 */
-	struct process * (*schedule)(bool);
+	struct process *(*schedule)(void);
 
 
 	/***********************************************************************
