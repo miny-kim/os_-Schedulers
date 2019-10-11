@@ -35,12 +35,17 @@ struct process {
 	unsigned int lifespan;	/* The lifespan of the process. The process will
 							   be exited with age == lifespan */
 
-	unsigned int prio;		/* Priority. 0 by default. The larger, the more
-							   important process it is */
-	unsigned int prio_orig; /* The original priority of the process. Use to
-							   implement PIP */
+	unsigned int prio;		/* Currently effective priority of the process.
+							   0 by default, and the larger, the more important
+							   process it is */
 
 	struct list_head list;	/* list head for listing processes */
+
+	/**
+	 * You might need following(s) to implement PIP
+	 */
+	unsigned int prio_orig;	/* The original priority of the process */
+
 
 	/* DO NOT ACCESS FOLLOWING VARIABLES */
 	unsigned int __starts_at;	/* When to fork the process */

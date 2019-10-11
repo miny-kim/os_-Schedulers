@@ -52,6 +52,28 @@ struct scheduler {
 
 
 	/***********************************************************************
+	 * void fork(struct process *process)
+	 *
+	 * DESCRIPTION
+	 *   Called when @process is newly forked. You may do per-process
+	 *   initialization work in this function. You may leave this function
+	 *   NULL if you don't need it.
+	 */
+	void (*forked)(struct process *);
+
+
+	/***********************************************************************
+	 * void exiting(struct process *process)
+	 *
+	 * DESCRIPTION
+	 *   Called when @process is about to exit. You may do per-process
+	 *   finalization work in this function. You may leave this function NULL
+	 *   if you don't need it.
+	 */
+	void (*exiting)(struct process *);
+
+
+	/***********************************************************************
 	 * struct process *schedule(void)
 	 *
 	 * DESCRIPTION

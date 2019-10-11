@@ -78,6 +78,7 @@ static const char * __process_status_sz[] = {
  */
 extern struct scheduler fifo_scheduler;
 extern struct scheduler sjf_scheduler;
+extern struct scheduler srjf_scheduler;
 extern struct scheduler rr_scheduler;
 extern struct scheduler prio_scheduler;
 extern struct scheduler pip_scheduler;
@@ -109,7 +110,7 @@ void dump_status(void)
 		if (r->owner || !list_empty(&r->waitqueue)) {
 			printf("%2d: owned by ", i);
 			if (r->owner) {
-				printf("%d\n", i, r->owner->pid);
+				printf("%d\n", r->owner->pid);
 			} else {
 				printf("no one\n");
 			}
@@ -222,20 +223,47 @@ static int __load_script(char * const filename)
 	return true;
 }
 
+
 /**
  * Fork process on schedule
  */
-static void __fork_on_schedule()
+static int __fork_on_schedule()
 {
+	int nr_forked = 0;
 	struct process *p, *tmp;
 	list_for_each_entry_safe(p, tmp, &__forkqueue, list) {
 		if (p->__starts_at <= ticks) {
 			list_move_tail(&p->list, &readyqueue);
 			p->status = PROCESS_READY;
 			__print_event(p->pid, "N");
+			if (sched->forked) sched->forked(p);
+			nr_forked++;
 		}
 	}
+	return nr_forked;
 }
+
+/**
+ * Exit the process
+ */
+static void __exit_process(struct process *p)
+{
+	/* Make sure the process is not attached to some list head */
+	assert(list_empty(&p->list));
+
+	/* Make sure the process is not holding any resource */
+	assert(list_empty(&p->__resources_holding));
+
+	/* Make sure there is no pending resource to acquire */
+	assert(list_empty(&p->__resources_to_acquire));
+
+	if (sched->exiting) sched->exiting(p);
+
+	__print_event(p->pid, "X");
+
+	free(p);
+}
+
 
 /**
  * Process resource acqutision
@@ -282,26 +310,6 @@ static void __run_current_release()
 			free(rs);
 		}
 	}
-}
-
-
-/**
- * Exit the process
- */
-static void __exit_process(struct process *p)
-{
-	/* Make sure the process is not attached to some list head */
-	assert(list_empty(&p->list));
-
-	/* Make sure the process is not holding any resource */
-	assert(list_empty(&p->__resources_holding));
-
-	/* Make sure there is no pending resource to acquire */
-	assert(list_empty(&p->__resources_to_acquire));
-
-	__print_event(p->pid, "X");
-
-	free(p);
 }
 
 
@@ -409,11 +417,12 @@ static void __initialize(void)
 
 static void __print_usage(char * const name)
 {
-	printf("Usage: %s {-q} -[f|s|r|p|i] [process script file]\n", name);
+	printf("Usage: %s {-q} -[f|s|S|r|p|i] [process script file]\n", name);
 	printf("\n");
 	printf("  -q: Run quietly\n\n");
 	printf("  -f: Use FIFO scheduler (default)\n");
 	printf("  -s: Use SJF scheduler\n");
+	printf("  -S: Use SRJF scheduler\n");
 	printf("  -r: Use Round-robin scheduler\n");
 	printf("  -p: Use Priority scheduler\n");
 	printf("  -i: Use Priority with PIP scheduler\n\n");
@@ -425,7 +434,7 @@ int main(int argc, char * const argv[])
 	int opt;
 	char *scriptfile;
 
-	while ((opt = getopt(argc, argv, "qfsrpih")) != -1) {
+	while ((opt = getopt(argc, argv, "qfsSrpih")) != -1) {
 		switch (opt) {
 		case 'q':
 			quiet = true;
@@ -436,6 +445,9 @@ int main(int argc, char * const argv[])
 			break;
 		case 's':
 			sched = &sjf_scheduler;
+			break;
+		case 'S':
+			sched = &srjf_scheduler;
 			break;
 		case 'r':
 			sched = &rr_scheduler;

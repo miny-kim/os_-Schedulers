@@ -16,6 +16,7 @@
 /* THIS FILE IS ALL YOURS; DO WHATEVER YOU WANT TO DO IN THIS FILE */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <assert.h>
 
 #include "types.h"
@@ -230,6 +231,19 @@ struct scheduler sjf_scheduler = {
 
 
 /***********************************************************************
+ * SJF scheduler
+ ***********************************************************************/
+struct scheduler srjf_scheduler = {
+	.name = "Shortest Remaining Job First",
+	.acquire = fcfs_acquire, /* Use the default FCFS acquire() */
+	.release = fcfs_release, /* Use the default FCFS release() */
+	/* You need to check the newly created processes to implement SRJF.
+	 * Use @forked() callback to mark newly created processes */
+	/* Obviously, you should implement srjf_schedule() and attach it here */
+};
+
+
+/***********************************************************************
  * Round-robin scheduler
  ***********************************************************************/
 struct scheduler rr_scheduler = {
@@ -259,8 +273,8 @@ struct scheduler prio_scheduler = {
 struct scheduler pip_scheduler = {
 	.name = "Priority + Priority Inheritance Protocol",
 	/**
-	 * Implement your own acqure/release function to make priority
+	 * Implement your own acqure/release function too to make priority
 	 * scheduler correct.
 	 */
-	/* Implement your own pip_schedule() and attach it here */
+	/* It goes without saying to implement your own pip_schedule() */
 };
