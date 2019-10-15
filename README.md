@@ -67,7 +67,7 @@ To better understand them, you will implement SJF, SRJF, round-robin, priority, 
 - Use `dump_status()` function to see the situation.
 - It is recommended to build a toy program to practice list manipulation with list head. The list head looks very weird at first, but it is really powerful and handy library once you get used to it. Make sure you are using `list_for_*_safe` variants if an entry is removed from the list during the iteration, and `list_del_init` to remove an entry from the list. (Do some Internet search for their differences)
 	- Introduction: https://kernelnewbies.org/FAQ/LinkedLists
-	- Samples in pa2.c
+	- Samples in sched.c
 	- Kernel API manual: https://www.kernel.org/doc/html/v4.15/core-api/kernel-api.html
 	- Advanced explanation: https://medium.com/@414apache/kernel-data-structures-linkedlist-b13e4f8de4bf
 - Do not try to forge the result using fprintf.
@@ -80,7 +80,7 @@ To better understand them, you will implement SJF, SRJF, round-robin, priority, 
 	- 320 pts + 10 pts 
   - Some testcases are hidden and only show the final decision (i.e., pass/fail);
 
-- Code: ***sched.c*** (300 pts)
+- Code: ***pa2.c*** (300 pts)
 	- SJF scheduler: 20
 	- SRJF scheduler: 50
 	- RR scheduler:  50

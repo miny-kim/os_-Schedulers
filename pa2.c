@@ -13,482 +13,268 @@
  *
  **********************************************************************/
 
-/*====================================================================*/
-/*          ******        DO NOT MODIFY THIS FILE        ******       */
+/* THIS FILE IS ALL YOURS; DO WHATEVER YOU WANT TO DO IN THIS FILE */
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <assert.h>
-#include <unistd.h>
-#include <getopt.h>
 
 #include "types.h"
 #include "list_head.h"
 
-#include "parser.h"
+/**
+ * The process which is currently running
+ */
 #include "process.h"
-#include "resource.h"
-
-#include "sched.h"
+extern struct process *current;
 
 /**
  * List head to hold the processes ready to run
  */
-LIST_HEAD(readyqueue);
+extern struct list_head readyqueue;
 
-/**
- * The process that is currently running
- */
-struct process *current = NULL;
-
-/**
- * Number of generated ticks since the simulator was started
- */
-unsigned int ticks = 0;
 
 /**
  * Resources in the system.
  */
-struct resource resources[NR_RESOURCES];
-
-/**
- * Following code is to maintain the simulator itself.
- */
-struct resource_schedule {
-	int resource_id;
-	int at;
-	int duration;
-	struct list_head list;
-};
-
-static LIST_HEAD(__forkqueue);
-
-bool quiet = false;
-
-static const char * __process_status_sz[] = {
-	"RDY",
-	"RUN",
-	"WAT",
-	"EXT",
-};
-
-/**
- * Assorted schedulers
- */
-extern struct scheduler fifo_scheduler;
-extern struct scheduler sjf_scheduler;
-extern struct scheduler srjf_scheduler;
-extern struct scheduler rr_scheduler;
-extern struct scheduler prio_scheduler;
-extern struct scheduler pip_scheduler;
-
-static struct scheduler *sched = &fifo_scheduler;
-
-void dump_status(void)
-{
-	struct process *p;
-
-	printf("***** CURRENT *********\n");
-	if (current) {
-		printf("%2d (%s): %d + %d/%d at %d\n",
-				current->pid, __process_status_sz[current->status],
-				current->__starts_at,
-				current->age, current->lifespan, current->prio);
-	}
-
-	printf("***** READY QUEUE *****\n");
-	list_for_each_entry(p, &readyqueue, list) {
-		printf("%2d (%s): %d + %d/%d at %d\n",
-				p->pid, __process_status_sz[p->status],
-				p->__starts_at, p->age, p->lifespan, p->prio);
-	}
-
-	printf("***** RESOURCES *******\n");
-	for (int i = 0; i < NR_RESOURCES; i++) {
-		struct resource *r = resources + i;;
-		if (r->owner || !list_empty(&r->waitqueue)) {
-			printf("%2d: owned by ", i);
-			if (r->owner) {
-				printf("%d\n", r->owner->pid);
-			} else {
-				printf("no one\n");
-			}
-
-			list_for_each_entry(p, &r->waitqueue, list) {
-				printf("    %d is waiting\n", p->pid);
-			}
-		}
-	}
-	printf("\n\n");
-
-	return;
-}
-
-#define __print_event(pid, string, args...) do { \
-	fprintf(stderr, "%3d: ", ticks); \
-	for (int i = 0; i < pid; i++) { \
-		fprintf(stderr, "    "); \
-	} \
-	fprintf(stderr, string "\n", ##args); \
-} while (0);
-
-static inline bool strmatch(char * const str, const char *expect)
-{
-	return (strlen(str) == strlen(expect)) && (strncmp(str, expect, strlen(expect)) == 0);
-}
-
-static void __briefing_process(struct process *p)
-{
-	struct resource_schedule *rs;
-
-	if (quiet) return;
-
-	printf("- Process %d: Forked at tick %d and run for %d tick%s with initial priority %d\n",
-				p->pid, p->__starts_at, p->lifespan,
-				p->lifespan >= 2 ? "s" : "", p->prio);
-
-	list_for_each_entry(rs, &p->__resources_to_acquire, list) {
-		printf("    Acquire resource %d at %d for %d\n", rs->resource_id, rs->at, rs->duration);
-	}
-}
-
-static int __load_script(char * const filename)
-{
-	char line[256];
-	struct process *p = NULL;
-
-	FILE *file = fopen(filename, "r");
-	while (fgets(line, sizeof(line), file)) {
-		char *tokens[32] = { NULL };
-		int nr_tokens;
-
-		parse_command(line, &nr_tokens, tokens);
-
-		if (nr_tokens == 0) continue;
-
-		if (strmatch(tokens[0], "process")) {
-			assert(nr_tokens == 2);
-			/* Start processor description */
-			p = malloc(sizeof(*p));
-			memset(p, 0x00, sizeof(*p));
-
-			p->pid = atoi(tokens[1]);
-
-			INIT_LIST_HEAD(&p->list);
-			INIT_LIST_HEAD(&p->__resources_to_acquire);
-			INIT_LIST_HEAD(&p->__resources_holding);
-
-			continue;
-		} else if (strmatch(tokens[0], "end")) {
-			/* End of process description */
-			struct resource_schedule *rs;
-			assert(p);
-
-			list_add_tail(&p->list, &__forkqueue);
-
-			__briefing_process(p);
-			p = NULL;
-
-			continue;
-		}
-
-		if (strmatch(tokens[0], "lifespan")) {
-			assert(nr_tokens == 2);
-			p->lifespan = atoi(tokens[1]);
-		} else if (strmatch(tokens[0], "prio")) {
-			assert(nr_tokens == 2);
-			p->prio = p->prio_orig = atoi(tokens[1]);
-		} else if (strmatch(tokens[0], "start")) {
-			assert(nr_tokens == 2);
-			p->__starts_at = atoi(tokens[1]);
-		} else if (strmatch(tokens[0], "acquire")) {
-			struct resource_schedule *rs;
-			assert(nr_tokens == 4);
-
-			rs = malloc(sizeof(*rs));
-
-			rs->resource_id = atoi(tokens[1]);
-			rs->at = atoi(tokens[2]);
-			rs->duration = atoi(tokens[3]);
-
-			list_add_tail(&rs->list, &p->__resources_to_acquire);
-		} else {
-			fprintf(stderr, "Unknown property %s\n", tokens[0]);
-			return false;
-		}
-	}
-	fclose(file);
-	if (!quiet) printf("\n");
-	return true;
-}
+#include "resource.h"
+extern struct resource resources[NR_RESOURCES];
 
 
 /**
- * Fork process on schedule
+ * Monotonically increasing ticks
  */
-static int __fork_on_schedule()
-{
-	int nr_forked = 0;
-	struct process *p, *tmp;
-	list_for_each_entry_safe(p, tmp, &__forkqueue, list) {
-		if (p->__starts_at <= ticks) {
-			list_move_tail(&p->list, &readyqueue);
-			p->status = PROCESS_READY;
-			__print_event(p->pid, "N");
-			if (sched->forked) sched->forked(p);
-			nr_forked++;
-		}
-	}
-	return nr_forked;
-}
-
-/**
- * Exit the process
- */
-static void __exit_process(struct process *p)
-{
-	/* Make sure the process is not attached to some list head */
-	assert(list_empty(&p->list));
-
-	/* Make sure the process is not holding any resource */
-	assert(list_empty(&p->__resources_holding));
-
-	/* Make sure there is no pending resource to acquire */
-	assert(list_empty(&p->__resources_to_acquire));
-
-	if (sched->exiting) sched->exiting(p);
-
-	__print_event(p->pid, "X");
-
-	free(p);
-}
+extern unsigned int ticks;
 
 
 /**
- * Process resource acqutision
+ * Quiet mode. True if the program was started with -q option
  */
-static bool __run_current_acquire()
-{
-	struct resource_schedule *rs, *tmp;
-
-	list_for_each_entry_safe(rs, tmp, &current->__resources_to_acquire, list) {
-		if (rs->at == current->age) {
-			assert(sched->acquire && "scheduler.acquire() not implemented");
-
-			/* Callback to acquire the resource */
-			if (sched->acquire(rs->resource_id)) {
-				list_move_tail(&rs->list, &current->__resources_holding);
-
-				__print_event(current->pid, "+%d", rs->resource_id);
-			} else {
-				return false;
-			}
-		}
-	}
-
-	return true;
-}
-
-/**
- * Process resource release
- */
-static void __run_current_release()
-{
-	struct resource_schedule *rs, *tmp;
-
-	list_for_each_entry_safe(rs, tmp, &current->__resources_holding, list) {
-		if (--rs->duration == 0) {
-			assert(sched->release && "scheduler.release() not implemented");
-
-			/* Callback the release() */
-			sched->release(rs->resource_id);
-
-			__print_event(current->pid, "-%d", rs->resource_id);
-
-			list_del(&rs->list);
-			free(rs);
-		}
-	}
-}
+extern bool quiet;
 
 
 /***********************************************************************
- * The main loop for the scheduler simulation
- */
-static void __do_simulation(void)
+ * Default FCFS resource acquision function
+ *
+ * DESCRIPTION
+ *   This is the default resource acquision function which is called back
+ *   whenever the current process is to acquire resource @resource_id.
+ *   The current implementation serves the resource in the requesting order
+ *   without considering the priority. See the comments in sched.h
+ ***********************************************************************/
+bool fcfs_acquire(int resource_id)
 {
-	assert(sched->schedule && "scheduler.schedule() not implemented");
+	struct resource *r = resources + resource_id;
 
-	while (true) {
-		struct process *prev;
+	if (!r->owner) {
+		/* This resource is not owned by any one. Take it! */
+		r->owner = current;
+		return true;
+	}
 
-		/* Fork processes on schedule */
-		__fork_on_schedule();
+	/* OK, this resource is taken by @r->owner. */
 
-		/* Ask scheduler to pick the next process to run */
-		prev = current;
-		current = sched->schedule();
+	/* Update the current process state */
+	current->status = PROCESS_WAIT;
 
-		/* If the system ran a process in the previous tick, */
-		if (prev) {
-			/* Update the process status */
-			if (prev->status == PROCESS_RUNNING) {
-				prev->status = PROCESS_READY;
-			}
+	/* And append current to waitqueue */
+	list_add_tail(&current->list, &r->waitqueue);
 
-			/* Decommission it if completed */
-			if (prev->age == prev->lifespan) {
-				prev->status = PROCESS_EXIT;
-				__exit_process(prev);
-			}
-		}
+	/**
+	 * And return false to indicate the resource is not available.
+	 * The scheduler framework will soon call schedule() function to
+	 * schedule out current and to pick the next process to run.
+	 */
+	return false;
+}
 
-		/* No process is ready to run at this moment */
-		if (!current) {
-			/* Quit simulation if no pending process exists */
-			if (list_empty(&readyqueue) && list_empty(&__forkqueue)) {
-				break;
-			}
+/***********************************************************************
+ * Default FCFS resource release function
+ *
+ * DESCRIPTION
+ *   This is the default resource release function which is called back
+ *   whenever the current process is to release resource @resource_id.
+ *   The current implementation serves the resource in the requesting order
+ *   without considering the priority. See the comments in sched.h
+ ***********************************************************************/
+void fcfs_release(int resource_id)
+{
+	struct resource *r = resources + resource_id;
 
-			/* Idle temporarily */
-			fprintf(stderr, "%3d: idle\n", ticks);
-			goto next;
-		}
+	/* Ensure that the owner process is releasing the resource */
+	assert(r->owner == current);
 
-		/* Execute the current process */
-		current->status = PROCESS_RUNNING;
+	/* Un-own this resource */
+	r->owner = NULL;
 
-		/* Ensure that @current is detached from any list */
-		assert(list_empty(&current->list));
+	/* Let's wake up ONE waiter (if exists) that came first */
+	if (!list_empty(&r->waitqueue)) {
+		struct process *waiter =
+				list_first_entry(&r->waitqueue, struct process, list);
 
-		/* Try acquiring scheduled resources */
-		if (__run_current_acquire()) {
-			/* Succesfully acquired all the resources to make a progress! */
-			__print_event(current->pid, "%d", current->pid);
+		/**
+		 * Ensure the waiter  is in the wait status
+		 */
+		assert(waiter->status == PROCESS_WAIT);
 
-			/* So, it ages by one tick */
-			current->age++;
+		/**
+		 * Take out the waiter from the waiting queue. Note we use
+		 * list_del_init() over list_del() to maintain the list head tidy
+		 * (otherwise, the framework will complain on the list head
+		 * when the process exits).
+		 */
+		list_del_init(&waiter->list);
 
-			/* And performs scheduled releases */
-			__run_current_release();
-		} else {
-			/**
-			 * The current is blocked while acquiring resource(s).
-			 * In this case, @current could not make a progress in this tick
-			 */
-			__print_event(current->pid, "=");
+		/* Update the process status */
+		waiter->status = PROCESS_READY;
 
-			/* Thus, it is not get aged nor unable to perform releases */
-		}
-
-next:
-		/* Increase the tick counter */
-		ticks++;
+		/**
+		 * Put the waiter process into ready queue. The framework will
+		 * do the rest.
+		 */
+		list_add_tail(&waiter->list, &readyqueue);
 	}
 }
 
 
-static void __initialize(void)
+
+#include "sched.h"
+
+/***********************************************************************
+ * FIFO scheduler
+ ***********************************************************************/
+static int fifo_initialize(void)
 {
-	INIT_LIST_HEAD(&readyqueue);
-
-	for (int i = 0; i < NR_RESOURCES; i++) {
-		resources[i].owner = NULL;
-		INIT_LIST_HEAD(&(resources[i].waitqueue));
-	}
-
-	INIT_LIST_HEAD(&__forkqueue);
-
-	if (quiet) return;
-	printf("**************************************************************\n");
-	printf("*\n");
-	printf("*   Simulating %s scheduler\n", sched->name);
-	printf("*\n");
-	printf("**************************************************************\n");
-	printf("   N: Forked\n");
-	printf("   X: Finished\n");
-	printf("   =: Blocked\n");
-	printf("  +n: Acquire resource n\n");
-	printf("  -n: Release resource n\n");
-	printf("\n");
+	return 0;
 }
 
-
-static void __print_usage(char * const name)
+static void fifo_finalize(void)
 {
-	printf("Usage: %s {-q} -[f|s|S|r|p|i] [process script file]\n", name);
-	printf("\n");
-	printf("  -q: Run quietly\n\n");
-	printf("  -f: Use FIFO scheduler (default)\n");
-	printf("  -s: Use SJF scheduler\n");
-	printf("  -S: Use SRJF scheduler\n");
-	printf("  -r: Use Round-robin scheduler\n");
-	printf("  -p: Use Priority scheduler\n");
-	printf("  -i: Use Priority with PIP scheduler\n\n");
 }
 
-
-int main(int argc, char * const argv[])
+static struct process *fifo_schedule(void)
 {
-	int opt;
-	char *scriptfile;
+	struct process *next = NULL;
 
-	while ((opt = getopt(argc, argv, "qfsSrpih")) != -1) {
-		switch (opt) {
-		case 'q':
-			quiet = true;
-			break;
+	/* You may inspect the situation by calling dump_status() at any time */
+	// dump_status();
 
-		case 'f':
-			sched = &fifo_scheduler;
-			break;
-		case 's':
-			sched = &sjf_scheduler;
-			break;
-		case 'S':
-			sched = &srjf_scheduler;
-			break;
-		case 'r':
-			sched = &rr_scheduler;
-			break;
-		case 'p':
-			sched = &prio_scheduler;
-			break;
-		case 'i':
-			sched = &pip_scheduler;
-			break;
-		case 'h':
-		default:
-			__print_usage(argv[0]);
-			return EXIT_FAILURE;
-		}
+	/**
+	 * When there was no process to run in the * previous tick (so does
+	 * in the very beginning of the simulation), there will be
+	 * no current process. In this case, pick the next without examining
+	 * the current process. Also, when the current process is blocked
+	 * while acquiring a resource, @current is (supposed to be) attached
+	 * to the waitqueue of the corresponding resource. In this case just
+	 * pick the next as well.
+	 */
+	if (!current || current->status == PROCESS_WAIT) {
+		goto pick_next;
 	}
 
-	if (optind >= argc) {
-		__print_usage(argv[0]);
-		return EXIT_FAILURE;
+	/* The current process has remaining lifetime. Schedule it again */
+	if (current->age < current->lifespan) {
+		return current;
 	}
 
-	scriptfile = argv[optind];
+pick_next:
+	/* Let's pick a new process to run next */
 
-	__initialize();
+	if (!list_empty(&readyqueue)) {
+		/**
+		 * If the ready queue is not empty, pick the first process
+		 * in the ready queue
+		 */
+		next = list_first_entry(&readyqueue, struct process, list);
 
-	if (!__load_script(scriptfile)) {
-		return EXIT_FAILURE;
+		/**
+		 * Detach the process from the ready queue. Note we use list_del_init()
+		 * instead of list_del() to maintain the list head tidy. Otherwise,
+		 * the framework will complain (assert) on process exit.
+		 */
+		list_del_init(&next->list);
 	}
 
-	if (sched->initialize && sched->initialize()) {
-		return EXIT_FAILURE;
-	}
-
-	__do_simulation();
-
-	if (sched->finalize) {
-		sched->finalize();
-	}
-
-	return EXIT_SUCCESS;
+	/* Return the next process to run */
+	return next;
 }
-/*          ******        DO NOT MODIFY THIS FILE        ******       */
-/*====================================================================*/
+
+struct scheduler fifo_scheduler = {
+	.name = "FIFO",
+	.acquire = fcfs_acquire,
+	.release = fcfs_release,
+	.initialize = fifo_initialize,
+	.finalize = fifo_finalize,
+	.schedule = fifo_schedule,
+};
+
+
+/***********************************************************************
+ * SJF scheduler
+ ***********************************************************************/
+static struct process *sjf_schedule(void)
+{
+	/**
+	 * Implement your own SJF scheduler here.
+	 */
+	return NULL;
+}
+
+struct scheduler sjf_scheduler = {
+	.name = "Shortest-Job First",
+	.acquire = fcfs_acquire, /* Use the default FCFS acquire() */
+	.release = fcfs_release, /* Use the default FCFS release() */
+	.schedule = NULL,		 /* TODO: Assign sjf_schedule()
+								to this function pointer to activate
+								SJF in the system */
+};
+
+
+/***********************************************************************
+ * SJF scheduler
+ ***********************************************************************/
+struct scheduler srjf_scheduler = {
+	.name = "Shortest Remaining Job First",
+	.acquire = fcfs_acquire, /* Use the default FCFS acquire() */
+	.release = fcfs_release, /* Use the default FCFS release() */
+	/* You need to check the newly created processes to implement SRJF.
+	 * Use @forked() callback to mark newly created processes */
+	/* Obviously, you should implement srjf_schedule() and attach it here */
+};
+
+
+/***********************************************************************
+ * Round-robin scheduler
+ ***********************************************************************/
+struct scheduler rr_scheduler = {
+	.name = "Round-Robin",
+	.acquire = fcfs_acquire, /* Use the default FCFS acquire() */
+	.release = fcfs_release, /* Use the default FCFS release() */
+	/* Obviously, you should implement rr_schedule() and attach it here */
+};
+
+
+/***********************************************************************
+ * Priority scheduler
+ ***********************************************************************/
+struct scheduler prio_scheduler = {
+	.name = "Priority",
+	/**
+	 * Implement your own acqure/release function to make priority
+	 * scheduler correct.
+	 */
+	/* Implement your own prio_schedule() and attach it here */
+};
+
+
+/***********************************************************************
+ * Priority scheduler with priority inheritance protocol
+ ***********************************************************************/
+struct scheduler pip_scheduler = {
+	.name = "Priority + Priority Inheritance Protocol",
+	/**
+	 * Implement your own acqure/release function too to make priority
+	 * scheduler correct.
+	 */
+	/* It goes without saying to implement your own pip_schedule() */
+};
