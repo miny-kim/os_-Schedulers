@@ -1,4 +1,4 @@
-## Project #2: Simulating Schedulers
+## Project #2: Simulating Processor Schedulers
 
 ### *** Due on 24:00, November 9 (Friday) ***
 
@@ -78,7 +78,7 @@ To better understand them, you will implement SJF, SRJF, round-robin, priority, 
 
 - Use [PAsubmit](https://sslab.ajou.ac.kr/pasubmit) for submission
 	- 320 pts + 10 pts 
-  - Some testcases are hidden and only show the final decision (i.e., pass/fail);
+	- Some testcases are hidden and only show the final decision (i.e., pass/fail);
 
 - Code: ***pa2.c*** (300 pts)
 	- SJF scheduler: 20
@@ -89,9 +89,9 @@ To better understand them, you will implement SJF, SRJF, round-robin, priority, 
 
 - Document: One PDF document (20 pts) including;
 	- Description how each scheduling policy is implemented
-  - Lesson learned (if you have any)
-  - No more than three pages
-  - Otherwise you will get 0 Pts for the report
+	- Lesson learned (if you have any)
+	- No more than three pages
+	- Otherwise you will get 0 Pts for the report
 
 - Git repository (10 pts)
 	- Register http URL and with a deploy token and password.
