@@ -6,7 +6,7 @@
 ### Goal
 
 During the class, we have learned various process scheduling policies and examined their properties.
-To better understand them, you will implement SJF, SRJF, round-robin, priority, and priority + PIP scheduling policies on an educational scheduler framework that imitates the scheduler core of modern operating systems.
+To better understand them, you will implement SJF, SRTF, round-robin, priority, and priority + PIP scheduling policies on an educational scheduler framework that imitates the scheduler core of modern operating systems.
 
 
 
@@ -50,7 +50,7 @@ To better understand them, you will implement SJF, SRJF, round-robin, priority, 
 
 - When the framework gets the resource acquisition request, it calls `acquire()` function of the scheduler. Similarly, the framework calls `release()` function when the process releases a resource. You may find default FCFS acquire/release functions in `sched.c` and the FIFO scheduler uses them to allocate resources. You may define your own acquire/release functions and associate them to your scheduler implementation to make a correct scheduling decision.
 
-- The framework is waiting for your implementation of shortest-job first (SJF) scheduler, shortest-remaining job first (SRJF) scheduler, round-robin scheduler, priority-based scheduler, and priority-based scheduler with priority inheritance protocol (PIP). You can start the program with a scheduler option and the framework will select the corresponding scheduler automatically. Check the options by running the program (`sched`) without any option.
+- The framework is waiting for your implementation of shortest-job first (SJF) scheduler, shortest-remaining time first (SRTF) scheduler, round-robin scheduler, priority-based scheduler, and priority-based scheduler with priority inheritance protocol (PIP). You can start the program with a scheduler option and the framework will select the corresponding scheduler automatically. Check the options by running the program (`sched`) without any option.
 
 - When a process is forked by the framework, the `forked()` callback function will be invoked. Similarly, when the process is done, `exiting()` callback function is called.
 
@@ -82,7 +82,7 @@ To better understand them, you will implement SJF, SRJF, round-robin, priority, 
 
 - Code: ***pa2.c*** (300 pts)
 	- SJF scheduler: 20
-	- SRJF scheduler: 50
+	- SRTF scheduler: 50
 	- RR scheduler:  50
 	- Priority scheduler: 50
 	- Priority scheduler + PIP: 130

@@ -78,7 +78,7 @@ static const char * __process_status_sz[] = {
  */
 extern struct scheduler fifo_scheduler;
 extern struct scheduler sjf_scheduler;
-extern struct scheduler srjf_scheduler;
+extern struct scheduler srtf_scheduler;
 extern struct scheduler rr_scheduler;
 extern struct scheduler prio_scheduler;
 extern struct scheduler pip_scheduler;
@@ -422,7 +422,7 @@ static void __print_usage(char * const name)
 	printf("  -q: Run quietly\n\n");
 	printf("  -f: Use FIFO scheduler (default)\n");
 	printf("  -s: Use SJF scheduler\n");
-	printf("  -S: Use SRJF scheduler\n");
+	printf("  -S: Use SRTF scheduler\n");
 	printf("  -r: Use Round-robin scheduler\n");
 	printf("  -p: Use Priority scheduler\n");
 	printf("  -i: Use Priority with PIP scheduler\n\n");
@@ -447,7 +447,7 @@ int main(int argc, char * const argv[])
 			sched = &sjf_scheduler;
 			break;
 		case 'S':
-			sched = &srjf_scheduler;
+			sched = &srtf_scheduler;
 			break;
 		case 'r':
 			sched = &rr_scheduler;

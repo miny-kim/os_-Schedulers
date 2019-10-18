@@ -231,15 +231,15 @@ struct scheduler sjf_scheduler = {
 
 
 /***********************************************************************
- * SJF scheduler
+ * SRTF scheduler
  ***********************************************************************/
-struct scheduler srjf_scheduler = {
-	.name = "Shortest Remaining Job First",
+struct scheduler srtf_scheduler = {
+	.name = "Shortest Remaining Time First",
 	.acquire = fcfs_acquire, /* Use the default FCFS acquire() */
 	.release = fcfs_release, /* Use the default FCFS release() */
-	/* You need to check the newly created processes to implement SRJF.
+	/* You need to check the newly created processes to implement SRTF.
 	 * Use @forked() callback to mark newly created processes */
-	/* Obviously, you should implement srjf_schedule() and attach it here */
+	/* Obviously, you should implement srtf_schedule() and attach it here */
 };
 
 
