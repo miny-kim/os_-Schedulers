@@ -1,6 +1,6 @@
 ## Project #2: Simulating Processor Schedulers
 
-### *** Due on 24:00, November 9 (Friday) ***
+### *** Due on 24:00, November 10 (Sunday) ***
 
 
 ### Goal
@@ -44,7 +44,7 @@ To better understand them, you will implement SJF, SRTF, round-robin, priority, 
 
 - `struct process *(*schedule)(void)` is the key function for the scheduling policy. The framework invokes the function whenever it needs a process to schedule next. The function should return a process to run next or NULL to indicate there is no process to run. See `fifo_scheduler()` in `sched.c`.
 
-- The framework has a ready queue `struct list_head readyqueue` which is supposed to keep the list of processes that are ready to run. It is defined as a list head, which is borrowed from the Linux kernel. You can easily find examples of using the list head from Internet. Note that the current process are not supposed to be in the ready queue.
+- The framework has the ready queue `struct list_head readyqueue` which is supposed to keep the list of processes that are ready to run. It is defined as a list head, which is borrowed from the Linux kernel. You can easily find examples of using the list head from Internet (see tips below). Note that the current process are *NOT* supposed to be in the ready queue.
 
 - The system has a number of system resources (32 in this PA) that can be assigned to processes exclusively. `struct resource` defines the system resources in `resource.h`. The process may ask the framework to acquire a resoruce and release it after use. Such a resource use is specified in the process description file using `acquire` property. For example, `acquire 1 4 2` means the process will require resource #1 at time tick 4 for 2 ticks. Have a look at `testcases/resources` for an example.
 
@@ -96,6 +96,6 @@ To better understand them, you will implement SJF, SRTF, round-robin, priority, 
 - Git repository (10 pts)
 	- Register http URL and with a deploy token and password.
 	- Start the repository by cloning this repository.
-	- Make sure the token is valid through November 14 (due date + 4 slip days)
+	- Make sure the token is valid through November 15 (due + 4 slip days + 1 day)
 
 - WILL NOT ANSWER THE QUESTIONS ABOUT THOSE ALREADY SPECIFIED ON THE HANDOUT.
