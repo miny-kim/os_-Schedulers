@@ -60,6 +60,8 @@ To better understand them, you will implement SJF, SRTF, round-robin, priority, 
 	You will get the full points for PIP if and only if these cases are all handled properly. Hint: calculate the *current* priority of the releasing process by checking resource acquitision status.
 
 
+- (Updated Oct 30) The priority scheduler and the priority scheduler with PIP should be based on the round-robin; If two or more processes are with the same priority, they should be scheduled in the round-robin way (switching them on each tick).
+
 
 ### Tips and Restriction
 
