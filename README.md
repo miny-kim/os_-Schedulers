@@ -42,7 +42,7 @@ To better understand them, you will implement SJF, SRTF, round-robin, priority, 
 
 - The framework only implements scheduling mechanisms (e.g., replacing the current, counting ticks, ... ), and it interacts with scheduling *policies* that are defined with `struct scheduler` in `sched.h`. `struct scheduler` is a collection of function pointers. The framework will call the functions to ask the scheduling policy for making decisions. Have a look at `fifo_scheduler` in `pa2.c` which implements a FIFO scheduler. You may also find other `scheduler` instances in `pa2.c` that are waiting for your implementation.
 
-- `struct process *(*schedule)(void)` is the key function for the scheduling policy. The framework invokes the function whenever it needs a process to schedule next. The function should return a process to run next or NULL to indicate there is no process to run. See `fifo_scheduler()` in `pa2.c`.
+- `struct process *(*schedule)(void)` is the key function for the scheduling policy. The framework invokes the function whenever it needs a process to schedule next. The function should return a process to run next or NULL to indicate there is no process to run. See `fifo_schedule()` in `pa2.c`.
 
 - The framework has the ready queue `struct list_head readyqueue` which is supposed to keep the list of processes that are ready to run. It is defined as a list head, which is borrowed from the Linux kernel. You can easily find examples of using the list head from Internet (see tips below). Note that the current process are *NOT* supposed to be in the ready queue.
 
