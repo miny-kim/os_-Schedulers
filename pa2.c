@@ -160,9 +160,9 @@ static struct process *fifo_schedule(void)
 	// dump_status();
 
 	/**
-	 * When there was no process to run in the * previous tick (so does
+	 * When there was no process to run in the previous tick (so does
 	 * in the very beginning of the simulation), there will be
-	 * no current process. In this case, pick the next without examining
+	 * no @current process. In this case, pick the next without examining
 	 * the current process. Also, when the current process is blocked
 	 * while acquiring a resource, @current is (supposed to be) attached
 	 * to the waitqueue of the corresponding resource. In this case just

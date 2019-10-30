@@ -55,13 +55,6 @@ struct process {
 
 	struct list_head __resources_holding;
 								/* Resources that the process is currently holding */
-
-/*====================================================================*/
-/*     ******   PUT YOUR WORK BETWEEN THE BORDER LINES   ******       */
-
-
-/*     ******   PUT YOUR WORK BETWEEN THE BORDER LINES   ******       */
-/*====================================================================*/
 };
 
 /**
