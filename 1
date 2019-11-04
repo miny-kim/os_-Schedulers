@@ -213,50 +213,37 @@ struct scheduler fifo_scheduler = {
 /***********************************************************************
  * SJF scheduler
  ***********************************************************************/
+
 static struct process *sjf_schedule(void)
 {
     struct process *next = NULL;
-    struct process *pnext = NULL;
-    struct process *endp = NULL;
-    int min = 100;
 
-   //현재 상태가 wait일때
-    if(!current || current->status == PROCESS_WAIT){
+    if(!current)//처음 시작할때 or readyqueue에 추가로 들어오면
+    {
+        while(!list_empty(&readyqueue)){
+            next = list_first_entry(&readyqueue, struct process, list);
+            printf("for debugging : %d\n", next->lifespan);
+            list_del_init(&next->list);
+        }
+    }
+    //현재 상태가 wait일때
+    if(current->status == PROCESS_WAIT){
         goto pick_next;
     }//next 결정해서 뽑기
 
     if(current->age < current->lifespan){
-        printf("11111111111\n");
         return current;}
 
 pick_next:
+
     
-if(!list_empty(&readyqueue)){
-    pnext = list_first_entry(&readyqueue, struct process, list);
-    endp = list_last_entry(&readyqueue, struct process, list);
-    next = pnext;
-   // max = pnext->prio;
-   // next = pnext;
-   // pnext = list_next_entry(pnext, list);
+    if(!list_empty(&readyqueue)){
+        next = list_first_entry(&readyqueue, struct process, list);
 
-    while(pnext){
-       
-        printf("for debugging(pid, lifespan) : %d, %d\n", pnext->pid, pnext->lifespan);
-
-        if(min>pnext->lifespan){
-            min = pnext->lifespan;
-            next = pnext;
-            printf("max : %d\n", min);
-        }
-        pnext = list_next_entry(pnext, list);
-        if(pnext->pid == 0)
-            break;
+        list_del_init(&next->list);
     }
 
-    list_del_init(&next->list);
-}
-	return next;
-
+    return next;
 }
 
 struct scheduler sjf_scheduler = {
