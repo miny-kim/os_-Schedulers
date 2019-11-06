@@ -530,9 +530,158 @@ struct scheduler prio_scheduler = {
 /***********************************************************************
  * Priority scheduler with priority inheritance protocol
  ***********************************************************************/
+
+bool pip_acquire(int resource_id)
+{
+	struct resource *r = resources + resource_id;
+
+	if (!r->owner) {
+		/* This resource is not owned by any one. Take it! */
+		r->owner = current;
+		return true;
+	}
+
+	/* OK, this resource is taken by @r->owner. */
+
+	/* Update the current process state */
+	if(r->owner->prio < current->prio)
+    {
+        if(r->owner->prio != r->owner->prio_orig)//already inherited
+            r->owner->prio = current->prio;//update just prio, not change prio_orig
+        else{
+            r->owner->prio_orig = r->owner->prio;
+            r->owner->prio = current->prio;
+        }
+       // printf("orig, new prio : %d, %d\n", r->owner->prio_orig, r->owner->prio);
+
+    }
+    current->status = PROCESS_WAIT;
+
+	/* And append current to waitqueue */
+	list_add_tail(&current->list, &r->waitqueue);
+
+	/**
+	 * And return false to indicate the resource is not available.
+	 * The scheduler framework will soon call schedule() function to
+	 * schedule out current and to pick the next process to run.
+	 */
+	return false;
+}
+
+void pip_release(int resource_id)
+{
+	struct resource *r = resources + resource_id;
+
+	/* Ensure that the owner process is releasing the resource */
+	assert(r->owner == current);
+   // printf("owner_prio_orig : %d\n", r->owner->prio_orig);
+	/* Un-own this resource */
+     if(r->owner->prio_orig != r->owner->prio)
+    {
+        r->owner->prio = r->owner->prio_orig;
+     //   printf("pid, set orig prio : %d, %d\n", r->owner->pid, r->owner->prio);
+    }
+	
+    r->owner = NULL;
+
+
+	/* Let's wake up ONE waiter (if exists) that came first */
+	if (!list_empty(&r->waitqueue)) {
+		struct process *waiter =
+				list_first_entry(&r->waitqueue, struct process, list);
+        struct process * pwaiter = waiter;
+        struct process * endp = list_last_entry(&r->waitqueue, struct process, list);
+     //   printf("endp->pid : %d\n", endp->pid);
+        int max = 0;
+        
+        while(pwaiter){
+           // printf("first : %d\n", pwaiter->pid);
+            if(max<pwaiter->prio){
+                max = pwaiter->prio;
+                waiter = pwaiter;
+             //   printf("final : %d\n", waiter->pid);
+            }
+
+            if(pwaiter->pid == endp->pid)
+                break;
+            pwaiter = list_next_entry(pwaiter, list);
+            // printf("inside while (pwaiter->pid):%d\n", pwaiter->pid); 
+        }
+       // printf("outside while (waiter->pid) : %d\n", waiter->pid);
+		/**
+		 * Ensure the waiter  is in the wait status
+		 */
+		assert(waiter->status == PROCESS_WAIT);
+
+		/**
+		 * Take out the waiter from the waiting queue. Note we use
+		 * list_del_init() over list_del() to maintain the list head tidy
+		 * (otherwise, the framework will complain on the list head
+		 * when the process exits).
+		 */
+		list_del_init(&waiter->list);
+
+		/* Update the process status */
+		waiter->status = PROCESS_READY;
+   	/**
+		 * Put the waiter process into ready queue. The framework will
+		 * do the rest.
+		 */
+		list_add_tail(&waiter->list, &readyqueue);
+	}
+}
+
+static struct process * pip_schedule(void)
+{
+    struct process * next = NULL;
+    struct process * pnext = NULL;
+    struct process * endp = NULL;
+    int max = 0;
+
+    if(!current || current->status == PROCESS_WAIT){
+        goto pick_next;
+    }
+
+    if(current->age < current->lifespan){
+        list_add_tail(&current->list, &readyqueue);
+        goto pick_next;
+    }
+
+pick_next:
+
+    if(!list_empty(&readyqueue)){
+        pnext = list_first_entry(&readyqueue, struct process, list);
+        endp = list_last_entry(&readyqueue, struct process, list);
+        next = pnext;
+   // max = pnext->prio;
+   // next = pnext;
+   // pnext = list_next_entry(pnext, list);
+
+        while(pnext){
+       
+            if(max<pnext->prio){
+                max = pnext->prio;
+                next = pnext;
+            }
+            if(pnext->pid == endp->pid)
+                break;
+            pnext = list_next_entry(pnext, list);
+            //if(pnext->pid == 0)
+              //  break;
+        }
+
+        list_del_init(&next->list);
+    }
+	return next;
+
+}
+
 struct scheduler pip_scheduler = {
 	.name = "Priority + Priority Inheritance Protocol",
-	/**
+    .acquire = pip_acquire,
+    .release = pip_release,
+    .schedule = pip_schedule,
+    /**
 	 * Implement your own acqure/release function too to make priority
 	 * scheduler correct.
 	 */
